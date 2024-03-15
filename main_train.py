@@ -7,7 +7,8 @@ import random
 import numpy as np
 from collections import OrderedDict
 import logging
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
+from tqdm import tqdm
 import torch
 
 from utils import utils_logger
@@ -81,6 +82,9 @@ def main(json_path='options/train_mbsr.json'):
     for phase, dataset_opt in opt['datasets'].items():
         if phase == 'train':
             train_set = define_Dataset(dataset_opt)
+            # Added part (2 lines)
+            subset_indices = np.random.choice(len(train_set), len(train_set) // 5, replace=False)
+            train_set = Subset(train_set, subset_indices)
             train_size = int(math.ceil(len(train_set) / dataset_opt['dataloader_batch_size']))
             logger.info('Number of train images: {:,d}, iters: {:,d}'.format(len(train_set), train_size))
             train_loader = DataLoader(train_set,
@@ -116,7 +120,7 @@ def main(json_path='options/train_mbsr.json'):
     '''
 
     for epoch in range(opt['train']['n_epochs']):  # keep running
-        for i, train_data in enumerate(train_loader):
+        for i, train_data in enumerate(tqdm(train_loader)):
             current_step += 1
             #print('current step = %d' % i)
 

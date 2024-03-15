@@ -12,7 +12,7 @@ class ModelMultiblur(ModelPlain):
         self.L = data['L'].to(self.device)  # low-quality image
         self.kmap = data['kmap'].to(self.device)  # blur kernel
         self.basis = data['basis'].to(self.device)  # blur kernel
-        self.sf = np.int(data['sf'][0,...].squeeze().cpu().numpy()) # scale factor
+        self.sf = int(data['sf'][0,...].squeeze().cpu().numpy()) # scale factor
         self.sigma = data['sigma'].to(self.device)  # noise level
         self.name_img = data['H_path']
         if need_H:
@@ -28,7 +28,7 @@ class ModelMultiblur(ModelPlain):
         load_path_G = self.opt['path']['pretrained_netG']
         if load_path_G is not None:
             print('Loading model for G [{:s}] ...'.format(load_path_G))
-            self.load_network(load_path_G, self.netG.module.p, strict=self.opt_train['G_param_strict'], param_key='params')
+            self.load_network(load_path_G, self.netG.module.p, strict=self.opt_train['G_param_strict'], param_key='params', prefix='p')
         
         #for k,v in self.netG.module.p.named_parameters():
             #v.requires_grad = False
