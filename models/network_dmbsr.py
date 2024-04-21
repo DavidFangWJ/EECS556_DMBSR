@@ -295,13 +295,19 @@ class HyPaNet(nn.Module):
 
 
 class DMBSR(nn.Module):
-    def __init__(self, n_iter=8, h_nc=64, in_nc=4, out_nc=3, nc=[64, 128, 256, 512], nb=2, act_mode='R', downsample_mode='strideconv', upsample_mode='convtranspose'):
+    def __init__(self, n_iter=8, h_nc=64, in_nc=4, out_nc=3, nc=[64, 128, 256, 512],
+                 nb=2, act_mode='R', downsample_mode='strideconv',
+                 upsample_mode='convtranspose', init_upsample_mode='nearest'):
         super(DMBSR, self).__init__()
 
         self.d = DataNet()
         self.p = ResUNet(in_nc=in_nc, out_nc=out_nc, nc=nc, nb=nb, act_mode=act_mode, downsample_mode=downsample_mode, upsample_mode=upsample_mode)
         self.h = HyPaNet(in_nc=2, out_nc=(n_iter+1)*3, channel=h_nc)
         self.n = n_iter
+
+        if init_upsample_mode is None:
+            init_upsample_mode = 'nearest'
+        self.init_upsample_mode = init_upsample_mode
 
     def forward(self, y, kmap, basis, sf, sigma):
         '''
@@ -313,7 +319,7 @@ class DMBSR(nn.Module):
         
         # Initialization
         STy = upsample(y, sf)
-        x_0 = nn.functional.interpolate(y, scale_factor=sf, mode='nearest')
+        x_0 = nn.functional.interpolate(y, scale_factor=sf, mode=self.init_upsample_mode)
         z_0 = x_0
         h_0 = o_leary_batch(x_0, kmap, basis)
         u_0 = torch.zeros_like(z_0)

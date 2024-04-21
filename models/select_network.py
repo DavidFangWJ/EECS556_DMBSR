@@ -27,7 +27,8 @@ def define_G(opt):
                    nb=opt_net['nb'],
                    act_mode=opt_net['act_mode'],
                    downsample_mode=opt_net['downsample_mode'],
-                   upsample_mode=opt_net['upsample_mode']
+                   upsample_mode=opt_net['upsample_mode'],
+                   init_upsample_mode=opt_net['init_upsample_mode']
                    )
         
     else:

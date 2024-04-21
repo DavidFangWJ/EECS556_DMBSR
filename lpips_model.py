@@ -27,7 +27,8 @@ opt_net = {"netG" : {"net_type": "dmbsr"
                     , "reduction" : 16
                     , "act_mode": "R" 
                     , "upsample_mode": "convtranspose" 
-                    , "downsample_mode": "strideconv"},
+                    , "downsample_mode": "strideconv"
+                    , "init_upsample_mode": "bilinear"},
            "is_train": False}
 
 path = r'model_zoo/zimeng_1.pth'
