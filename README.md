@@ -39,7 +39,7 @@ See *results/* folder for plotting functions.
 ## Pre-trained Models
 
 The pretrained model of the original model is in *model_zoo/DMBSR.pth*.
-For NPLS model, it is located in *SR/nimbusr/models/22500_G.pth*
+For NPLS model, it is located in *model_zoo/22500_G.pth*
 
 ## Results
 
