@@ -59,7 +59,7 @@ class ModelBase():
 
     def update_learning_rate(self, n):
         for scheduler in self.schedulers:
-            scheduler.step(n)
+            scheduler.step() #modified, original:scheduler.step()
 
     def current_learning_rate(self):
         return self.schedulers[0].get_lr()[0]
@@ -154,22 +154,12 @@ class ModelBase():
     # ----------------------------------------
     # load the state_dict of the network
     # ----------------------------------------
-    def load_network(self, load_path, network, strict=True, param_key='params', prefix=None):
+    def load_network(self, load_path, network, strict=True, param_key='params'):
         network = self.get_bare_model(network)
         if strict:
             state_dict = torch.load(load_path)
             if param_key in state_dict.keys():
                 state_dict = state_dict[param_key]
-            # Removing prefix from all keys
-            if prefix:
-                prefix = prefix + '.'
-                len_prefix = len(prefix)
-                state_dict_new = {}
-                for k in state_dict.keys():
-                    if k.find(prefix) == 0:
-                        state_dict_new[k[len_prefix:]] = state_dict[k]
-                del state_dict
-                state_dict = state_dict_new
             network.load_state_dict(state_dict, strict=strict)
         else:
             state_dict_old = torch.load(load_path)

@@ -6,6 +6,11 @@ from utils import utils_image as util
 from math import sqrt
 import os
 import subprocess
+import matplotlib.pyplot as plt
+import torch.nn.functional as F
+from scipy.sparse import csr_matrix, kron, eye
+from scipy.sparse.linalg import spsolve
+from scipy.sparse import vstack
 
 def get_gpu_memory_map():
     """Get the current gpu usage.
@@ -218,7 +223,7 @@ class ResUNet(nn.Module):
         paddingBottom = int(np.ceil(h/8)*8-h)
         paddingRight = int(np.ceil(w/8)*8-w)
         x = nn.ReplicationPad2d((0, paddingRight, 0, paddingBottom))(x)
-
+        
         x1 = self.m_head(x)
         x2 = self.m_down1(x1)
         x3 = self.m_down2(x2)
@@ -287,6 +292,78 @@ class HyPaNet(nn.Module):
         x = self.mlp(x) + 1e-6
         return x
 
+
+def apply_gradient_torch(image_tensor):
+    sobel_x = torch.tensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=torch.float32, device=image_tensor.device).view(1, 1, 3, 3)
+    sobel_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=torch.float32, device=image_tensor.device).view(1, 1, 3, 3)
+
+    sobel_x = sobel_x.repeat(image_tensor.shape[1], 1, 1, 1)
+    sobel_y = sobel_y.repeat(image_tensor.shape[1], 1, 1, 1)
+
+    grad_x = F.conv2d(image_tensor, sobel_x, padding=1, groups=image_tensor.shape[1])
+    grad_y = F.conv2d(image_tensor, sobel_y, padding=1, groups=image_tensor.shape[1])
+    
+    grad = torch.sqrt(grad_x**2 + grad_y**2)
+    return grad
+
+def high_pass_filter_torch(image_tensor, size=3):
+    kernel_value = -1 / (size * size)
+    kernel = torch.full((size, size), kernel_value, dtype=torch.float32, device=image_tensor.device)
+    kernel[size // 2, size // 2] = 1 + kernel_value
+    kernel = kernel.view(1, 1, size, size)
+
+    kernel = kernel.repeat(image_tensor.shape[1], 1, 1, 1)
+
+    high_pass = F.conv2d(image_tensor, kernel, padding=size//2, groups=image_tensor.shape[1])
+    return high_pass
+
+def buildC1(N):
+    i = np.arange(N - 1)
+    j = np.arange(N - 1)
+    i = np.concatenate([i, i])
+    j = np.concatenate([j, j + 1])
+    s = np.concatenate([np.ones(N - 1), -np.ones(N - 1)])
+    C1 = csr_matrix((s, (i, j)), shape=(N - 1, N))
+    return C1
+
+
+def buildC(nx, ny):
+    Cx = buildC1(nx)
+    Cy = buildC1(ny)
+    Ix = eye(ny)
+    Iy = eye(nx)
+    C = kron(Ix, Cx)
+    C = vstack([C, kron(Cy, Iy)])
+    return C
+
+
+def wt(t, delta):
+    return 1 / (1 + np.abs(t) / delta)
+
+
+def npls_sps(yy, niter=80, beta=16, delta=0.5):
+    nx, ny = yy.shape
+    C = buildC(nx, ny)
+    denom = 1 + beta * np.abs(C.T) @ (np.abs(C) @ np.ones(nx * ny))
+    xx = yy.T.reshape(-1, 1)[:, 0]  # initial guess: the noisy image - in a vector
+    for i in range(niter):
+        Cx = C @ xx
+        grad = xx - yy.T.reshape(-1, 1)[:, 0] + beta * (C.T @ (wt(Cx, delta) * Cx))
+        xx = xx - grad / denom
+    return (xx.T).reshape((yy.T).shape).T
+
+
+def npls(images):
+    device = images.device
+    images = images.cpu().numpy()
+    batch_size, channels, height, width = images.shape
+    processed_images = np.zeros_like(images)
+
+    for i in range(batch_size):
+        for c in range(channels):
+            processed_images[i, c] = npls_sps(images[i, c])
+    
+    return torch.from_numpy(processed_images).to(device)
 """
 # --------------------------------------------
 #   Main
@@ -295,19 +372,13 @@ class HyPaNet(nn.Module):
 
 
 class DMBSR(nn.Module):
-    def __init__(self, n_iter=8, h_nc=64, in_nc=4, out_nc=3, nc=[64, 128, 256, 512],
-                 nb=2, act_mode='R', downsample_mode='strideconv',
-                 upsample_mode='convtranspose', init_upsample_mode='nearest'):
+    def __init__(self, n_iter=8, h_nc=64, in_nc=4, out_nc=3, nc=[64, 128, 256, 512], nb=2, act_mode='R', downsample_mode='strideconv', upsample_mode='convtranspose'):
         super(DMBSR, self).__init__()
 
         self.d = DataNet()
         self.p = ResUNet(in_nc=in_nc, out_nc=out_nc, nc=nc, nb=nb, act_mode=act_mode, downsample_mode=downsample_mode, upsample_mode=upsample_mode)
         self.h = HyPaNet(in_nc=2, out_nc=(n_iter+1)*3, channel=h_nc)
         self.n = n_iter
-
-        if init_upsample_mode is None:
-            init_upsample_mode = 'nearest'
-        self.init_upsample_mode = init_upsample_mode
 
     def forward(self, y, kmap, basis, sf, sigma):
         '''
@@ -316,15 +387,30 @@ class DMBSR(nn.Module):
         sf: integer, 1
         sigma: tensor, Nx1x1x1
         '''
-        
+
+        '''
+        numpy_array = y[1,:,:,:].permute(1, 2, 0).cpu().numpy()
+
+        # Step 3: Use Matplotlib to visualize the tensor
+        plt.imshow(numpy_array, cmap='viridis')  # 'viridis' is a colormap, you can change it
+        plt.colorbar()  # optional, to show the color scale
+        plt.title('Visualization of a 2D PyTorch Tensor')
+        file_path = 'output_image.png'
+        plt.savefig(file_path)
+        exit(0)
+        '''
+        # y = npls(y) # npls denoise
+        # y = apply_gradient_torch(y) # gradient
+        # y = high_pass_filter_torch(y) # high-pass-filter
         # Initialization
         STy = upsample(y, sf)
-        x_0 = nn.functional.interpolate(y, scale_factor=sf, mode=self.init_upsample_mode)
+        x_0 = nn.functional.interpolate(y, scale_factor=sf, mode='nearest')
         z_0 = x_0
         h_0 = o_leary_batch(x_0, kmap, basis)
         u_0 = torch.zeros_like(z_0)
         ab = self.h(torch.cat((sigma, torch.tensor(sf).type_as(sigma).expand_as(sigma)), dim=1))
-
+        # print(sf, x_0.shape, h_0.shape,u_0.shape, STy.shape, y.shape)
+        
         for i in range(self.n):
             # Hyper-params
             alpha = ab[:, i:i+1, ...]
@@ -333,8 +419,11 @@ class DMBSR(nn.Module):
 
             # ADMM steps
             i_0 = x_0 - beta * transpose_o_leary_batch(h_0 - z_0 + u_0, kmap, basis)
+            #print(x_0.shape, h_0.shape,u_0.shape, STy.shape)
             x_0 = self.p(torch.cat((i_0, gamma.repeat(1, 1, i_0.size(2), i_0.size(3))), dim=1))
+            #print(x_0.shape, h_0.shape,u_0.shape, STy.shape)
             h_0 = o_leary_batch(x_0, kmap, basis)
+            
             z_0 = self.d(h_0 + u_0, STy, alpha, sf, sigma)
             u_0 = u_0 + h_0 - z_0
 

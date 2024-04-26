@@ -15,6 +15,7 @@ import utils.utils_image as util
 import utils.utils_sisr as sisr
 from utils import utils_deblur
 
+import cv2
 
 class Dataset(data.Dataset):
     def __init__(self, opt):
@@ -34,7 +35,15 @@ class Dataset(data.Dataset):
         self.dataroot_H = self.opt['dataroot_H']
         self.coco = COCO(self.opt['coco_annotation_path'])
         indexes = self.coco.getImgIds()
-
+        
+        # Modified ############################################
+        # Initialize random subset
+        subset_ratio = 0.2
+        total_indices = len(indexes)
+        subset_size = int(total_indices * subset_ratio)
+        indexes = random.sample(indexes, subset_size)
+        # Modified ############################################
+        
         self.ids = []
 
         for i in indexes:
@@ -43,6 +52,7 @@ class Dataset(data.Dataset):
                 self.ids.append(i)
 
         self.count = 0
+        
 
     def random_kernel(self):
         r_value = random.randint(0, 7)
@@ -70,7 +80,6 @@ class Dataset(data.Dataset):
         return kernel_full
 
     def __getitem__(self, index):
-
         # ------------------------------------
         # get H image
         # ------------------------------------
@@ -181,6 +190,9 @@ class Dataset(data.Dataset):
             img_L.add_(noise)
 
         noise_level = torch.FloatTensor([noise_level]).view(1,1,1)
+        # print(type(img_L),img_L.shape, img_H.shape)
+        # img_L = self.extra_channel(img_L)
+        # img_H = self.extra_channel(img_H)
         return {'L': img_L, 'H': img_H, 'kmap': kernel_map, 'basis': torch.FloatTensor(basis), 'sigma': noise_level, 'sf': self.sf, 'L_path': L_path, 'H_path': H_path}
 
     def __len__(self):
@@ -188,3 +200,35 @@ class Dataset(data.Dataset):
             return len(self.ids)
         else:
             return min(len(self.ids), 200)
+
+    def extra_channel(self, img, include_extra_channels=True):
+        """
+        Generates a six-channel image consisting of the original RGB image, its grayscale version,
+        an edge detection channel, and a max-pooled channel.
+        Args:
+        img - Original RGB image as a torch tensor.
+        include_extra_channels - If True, includes the edge detection and max-pooled channels.
+
+        Returns:
+        A six-channel image and its channel count.
+        """
+        # Convert the torch tensor to a numpy array
+        img_np = img.permute(1, 2, 0).cpu().numpy()
+
+        # Convert to grayscale
+        img_gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+
+        # Edge detection using a simple kernel
+        kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+        img_edge = cv2.filter2D(img_gray, -1, kernel)
+        img_edge[img_edge < 0] = 0
+
+        # Combine the original RGB image, grayscale image, and edge detection image
+        if include_extra_channels:
+            combined_image_np = np.concatenate((img_np, img_gray[..., np.newaxis], img_edge[..., np.newaxis]), axis=-1)
+            combined_image = torch.from_numpy(combined_image_np).permute(2, 0, 1).to(img.device)
+        else:
+            combined_image = img
+
+        return combined_image
+
