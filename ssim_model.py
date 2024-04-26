@@ -28,10 +28,10 @@ opt_net = {"netG" : {"net_type": "dmbsr"
                     , "act_mode": "R" 
                     , "upsample_mode": "convtranspose" 
                     , "downsample_mode": "strideconv"
-                    , "init_upsample_mode": "bilinear"},
+                    , "init_upsample_mode": "nearest"},
            "is_train": False}
 
-path = r'model_zoo/zimeng_1.pth'
+path = r'model_zoo/bicubic.pth'
 netG = define_G(opt_net)
 netG.load_state_dict(torch.load(path))
 netG = netG.to('cuda')
