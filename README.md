@@ -1,69 +1,63 @@
-# Deep Model-Based Super-Resolution with Non-uniform Blur
+g
+# Elevating Method in Super-Resolution with Non-Uniform Blur
 
-<a href="https://arxiv.org/abs/2204.10109" target="_blank" rel="noopener"><img src="logo/arxiv.png" height=30 alt="Download"></a>  
+This repository is the official implementation of [Elevating Method in Super-Resolution with Non-Uniform Blur](https://www.overleaf.com/project/65d41d3f46d6269c0e74e919). 
+The code for NPLS is added to *models/network_dmbsr.py*.
 
-This repository implements the code of *Deep Model-Based Super-Resolution with Non-uniform Blur*
+## Requirements
 
-# Train
+To install requirements:
 
-To train the code please first download COCO dataset available at: https://cocodataset.org.
-
+```setup
+conda create -n dmbsr python=3.6
+conda install pytorch==1.10.1 torchvision==0.11.2 torchaudio==0.10.1 cudatoolkit=11.3 -c pytorch -c conda-forge
+conda install tqdm
+conda install matplotlib
+pip install opencv-python
+conda install conda-forge/label/main::pycocotools
+conda install scipy
 ```
+The blur kernels are available for download [here](https://drive.google.com/file/d/1o1ruvDSbR9R12DzjA-2KIps7cqy4544v/view?usp=share_link). They need to be added in the folder |-*kernels*
+
+These requirements should be located in conda_env.txt. If there is still any package missing, please install using conda or pip.
+
+## Training
+
+To train the model(s) in the paper, please first download COCO dataset available at: https://cocodataset.org
+
+```train
 python main_train.py -opt options/train_nimbusr.json
+python mytrain.py -opt options/train_nimbusr.json # mytrain.py is a modified version for our own training
 ```
 
-# Test
 
-Pre-trained model is available at: *model_zoo/DMBSR.pth*
-
-Our blur kernels are available for download [here](https://drive.google.com/file/d/1fDtSwItCCqob6ZJ_zvVfvQJ8U1q7dV7D/view?usp=share_link). They need to be added in the folder |-*kernels*
+## Evaluation
 
 See *test_model.ipynb* to test the model on COCO dataset.
+See *results/* folder for plotting functions.
 
-# Results
+## Pre-trained Models
 
-We achieve state-of-the-art results in super-resolution in the presence of spatially-varying blur.
-Here are some of the results we obtained. Feel free to test on your own sample using the testing notebook.
+The pretrained model of the original model is in *model_zoo/DMBSR.pth*.
+For NPLS model, it is located in *SR/nimbusr/models/22500_G.pth*
 
-LR | SwinIR           |  BlindSR | USRNet | Ours | HR 
-:-:|:------------------:|:-------:|:---:|:------:|:----:
-<img src="images/Visual_res/kmap_1.png" alt="" width="100"/>  |  <img src="images/Visual_res/SwinIR_1.png" alt="" width="100"/> | <img src="images/Visual_res/blindsr_1.png" alt="" width="100"/>  | <img src="images/Visual_res/usrnet_1.png" alt="" width="100"/>  | <img src="images/Visual_res/ours_1.png" alt="" width="100"/>  | <img src="images/Visual_res/HR_1.png" alt="" width="100"/>
-<img src="images/Visual_res/kmap_1_small.png" alt="" width="100"/>  |  <img src="images/Visual_res/SwinIR_1_small.png" alt="" width="100"/> | <img src="images/Visual_res/blindsr_1_small.png" alt="" width="100"/>  | <img src="images/Visual_res/usrnet_1_small.png" alt="" width="100"/>  | <img src="images/Visual_res/ours_1_small.png" alt="" width="100"/>  | <img src="images/Visual_res/HR_1_small.png" alt="" width="100"/>
-<img src="images/Visual_res/kmap_2.png" alt="" width="100"/>  |  <img src="images/Visual_res/SwinIR_2.png" alt="" width="100"/> | <img src="images/Visual_res/blindsr_2.png" alt="" width="100"/>  | <img src="images/Visual_res/usrnet_2.png" alt="" width="100"/>  | <img src="images/Visual_res/ours_2.png" alt="" width="100"/>  | <img src="images/Visual_res/HR_2.png" alt="" width="100"/>
-<img src="images/Visual_res/kmap_2_small.png" alt="" width="100"/>  |  <img src="images/Visual_res/SwinIR_2_small.png" alt="" width="100"/> | <img src="images/Visual_res/blindsr_2_small.png" alt="" width="100"/>  | <img src="images/Visual_res/usrnet_2_small.png" alt="" width="100"/>  | <img src="images/Visual_res/ours_2_small.png" alt="" width="100"/>  | <img src="images/Visual_res/HR_2_small.png" alt="" width="100"/>
-<img src="images/Visual_res/kmap_3.png" alt="" width="100"/>  |  <img src="images/Visual_res/SwinIR_3.png" alt="" width="100"/> | <img src="images/Visual_res/blindsr_3.png" alt="" width="100"/>  | <img src="images/Visual_res/usrnet_3.png" alt="" width="100"/>  | <img src="images/Visual_res/ours_3.png" alt="" width="100"/>  | <img src="images/Visual_res/HR_3.png" alt="" width="100"/>
-<img src="images/Visual_res/kmap_3_small.png" alt="" width="100"/>  |  <img src="images/Visual_res/SwinIR_3_small.png" alt="" width="100"/> | <img src="images/Visual_res/blindsr_3_small.png" alt="" width="100"/>  | <img src="images/Visual_res/usrnet_3_small.png" alt="" width="100"/>  | <img src="images/Visual_res/ours_3_small.png" alt="" width="100"/>  | <img src="images/Visual_res/HR_3_small.png" alt="" width="100"/>
+## Results
 
-LR | SwinIR           |  BlindSR | USRNet | Ours  
-:-:|:------------------:|:-------:|:---:|:------:
-<img src="images/Generalization/1_LR.png" alt="" width="100"/>  |  <img src="images/Generalization/1_swinir.png" alt="" width="100"/> | <img src="images/Generalization/1_blindsr.png" alt="" width="100"/>  | <img src="images/Generalization/1_usrnet.png" alt="" width="100"/>  | <img src="images/Generalization/1_nimbusr.png" alt="" width="100"/>  
-<img src="images/Generalization/1_small_LR.png" alt="" width="100"/>  |  <img src="images/Generalization/1_small_swinir.png" alt="" width="100"/> | <img src="images/Generalization/1_small_blindsr.png" alt="" width="100"/>  | <img src="images/Generalization/1_small_usrnet.png" alt="" width="100"/>  | <img src="images/Generalization/1_small_nimbusr.png" alt="" width="100"/>  
+Our model achieves the following performance on :
 
-# Real-world images 
+### [COCO Dataset](https://cocodataset.org)
 
-For this section, we used the code provided by https://github.com/GuillermoCarbajal/NonUniformBlurKernelEstimation to estimate the kernel and we combine their kernel estimation to our super-resolution model. We also use the dataset provided by "Laurent D’Andrès, Jordi Salvador, Axel Kochale, and Sabine Süsstrunk. Non-parametric blur map regression for depth of field extension".
-
-### Defocus x2 super-resolution
-LR | SwinIR           |  BlindSR | Ours  
-:-:|:------------------:|:-------:|:------:
-<img src="images/defocus/image_01.png" alt="" width="100"/>  |  <img src="images/defocus/swinir_x2_image_01.png" alt="" width="100"/>  | <img src="images/defocus/blindsr_x2_image_01.png" alt="" width="100"/>  | <img src="images/defocus/ours_x2_image_01.png" alt="" width="100"/> 
-<img src="images/defocus/image_05.png" alt="" width="100"/>  |  <img src="images/defocus/swinir_x2_image_05.png" alt="" width="100"/>  | <img src="images/defocus/blindsr_x2_image_05.png" alt="" width="100"/>  | <img src="images/defocus/ours_x2_image_05.png" alt="" width="100"/> 
-<img src="images/defocus/image_22.png" alt="" width="100"/>  |  <img src="images/defocus/swinir_x2_image_22.png" alt="" width="100"/>  | <img src="images/defocus/blindsr_x2_image_22.png" alt="" width="100"/>  | <img src="images/defocus/ours_x2_image_22.png" alt="" width="100"/> 
-
-### Deblurring
-LR | DMPHN           |  RealBlur | MPRNet | Ours  
-:-:|:------------------:|:-------:|:------:|:---:
-<img src="images/realworld/building1.jpg" alt="" width="100"/>  |  <img src="images/realworld/DMPHNbuilding1.jpg" alt="" width="100"/>  | <img src="images/realworld/RealBlur_building1.jpg" alt="" width="100"/>  | <img src="images/realworld/MPRNet_building1.jpg" alt="" width="100"/>  | <img src="images/realworld/ours_building1.jpg" alt="" width="100"/>  
-<img src="images/realworld/church.jpg" alt="" width="100"/>   | <img src="images/realworld/DMPHNchurch.jpg" alt="" width="100"/>  | <img src="images/realworld/RealBlur_church.jpg" alt="" width="100"/>  | <img src="images/realworld/MPRNet_church.jpg" alt="" width="100"/>  | <img src="images/realworld/ours_church.jpg" alt="" width="100"/>   
-<img src="images/realworld/coke.jpg" alt="" width="100"/>  | <img src="images/realworld/DMPHNcoke.jpg" alt="" width="100"/> | <img src="images/realworld/RealBlur_coke.jpg" alt="" width="100"/> | <img src="images/realworld/MPRNet_coke.jpg" alt="" width="100"/> | <img src="images/realworld/ours_coke.jpg" alt="" width="100"/>
-<img src="images/realworld/butchershop.jpg" alt="" width="100"/> | <img src="images/realworld/DMPHNbutchershop.jpg" alt="" width="100"/> | <img src="images/realworld/RealBlur_butchershop.jpg" alt="" width="100"/> | <img src="images/realworld/MPRNet_butchershop.jpg" alt="" width="100"/> | <img src="images/realworld/ours_butchershop.jpg" alt="" width="100"/>
+| Configurations         | With NPLS  | Without NPLS |
+| ------------------ |---------------- | -------------- |
+| Low   |     24.54dB         |      23.91dB       |
+| High | 24.94dB | 25.18dB |
 
 
-# Acknowledgement
-The codes use [KAIR](https://github.com/cszn/KAIR) as base. Please also follow their licenses. I would like to thank them for the amazing repository.
 
-# Citation
-If you use our work, please cite us with the following:
+
+## Contributing
+
+We are working on the code based on the following work.
 ```
 @InProceedings{laroche2023dmbsr,
   title = {Deep Model-Based Super-Resolution with Non-Uniform Blur},
