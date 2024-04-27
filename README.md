@@ -2,7 +2,7 @@
 
 This repository is the improvement methods for official implementation of [Elevating Method in Super-Resolution with Non-Uniform Blur](https://www.overleaf.com/project/65d41d3f46d6269c0e74e919). 
 
-Improvement methods include classical image post-processing and sub-pixel convolution w or w/o training.
+Improvement methods include classical image post-processing and sub-pixel convolution w or w/o frozen training.
 
 ### Post-Processing Block with Bilateral Filter, Guided Filter Or Wavelet
 The Bilateral Filter, Guided Filter and Wavelet Realizations are in *post_processing_block/* file.
